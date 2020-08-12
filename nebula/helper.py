@@ -21,6 +21,32 @@ def get_uarts():
             return (strs, default)
     return (None, default)
 
+def get_uart_devices(search_string=None):
+        """ Scan all uart connected to the host"""
+        ports = serial.tools.list_ports.comports()
+        uart_ports = []
+        if search_string is not None:
+            if(not isintance(search_string, list)):
+                search_string = [search_string]
+                for port in ports:
+                    if any(x in port.device for x in search_strings):
+                        uart_ports.append({
+                            "path": port.device,
+                            "name": port.name,
+                            "description": port.description
+                            })
+        else:
+            for port in ports:
+                uart_ports.append({
+                    "path": port.device,
+                    "name": port.name,
+                    "description": port.description
+                    })
+
+        if (len(uart_ports)>0):
+            return uart_ports
+        else
+            return None
 
 def get_nics():
     filter = ["docker0", "lo"]
