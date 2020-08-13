@@ -4,7 +4,8 @@ import pathlib
 import netifaces
 import glob
 import click
-
+import serial
+import serial.tools.list_ports
 
 def get_uarts():
     LINUX_SERIAL_FOLDER = "/dev/serial"
@@ -21,13 +22,13 @@ def get_uarts():
             return (strs, default)
     return (None, default)
 
-def get_uart_devices(search_string=None):
+def get_uart_devices(search_strings=None):
         """ Scan all uart connected to the host"""
         ports = serial.tools.list_ports.comports()
         uart_ports = []
-        if search_string is not None:
-            if(not isintance(search_string, list)):
-                search_string = [search_string]
+        if search_strings is not None:
+            if(not isintance(search_strings, list)):
+                search_strings = [search_strings]
                 for port in ports:
                     if any(x in port.device for x in search_strings):
                         uart_ports.append({
@@ -45,7 +46,7 @@ def get_uart_devices(search_string=None):
 
         if (len(uart_ports)>0):
             return uart_ports
-        else
+        else:
             return None
 
 def get_nics():
