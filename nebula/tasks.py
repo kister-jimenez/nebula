@@ -360,6 +360,28 @@ def set_local_nic_ip_from_usbdev(
     except Exception as ex:
         print(ex)
 
+@task(
+    help={
+        "search_strings": "List of portions of names of the device to match. ",
+    },
+)
+def get_uarts(c,search_strings=None):
+    """ Get uart ports of the host that is connected to carriers """
+    try:
+        # Scan all UARTs
+        uart_devices = nebula.uart.get_uart_devices(search_strings=search_strings)
+        if len(uart_devices)>0:
+            print("Uart devices found ("+str(len(uart_devices))+")",end=': ')
+            for uart_device in uart_devices:
+                    print(uart_device["path"],end=":")
+                    print(uart_device["description"],end=", ")
+            print("")
+        else:
+            print("No devices found")
+        del uart_devices
+    except Exception as ex:
+        print(ex)
+
 
 @task(
     help={
@@ -521,6 +543,7 @@ uart.add_task(set_dhcp)
 uart.add_task(set_static_ip)
 uart.add_task(get_carriername)
 uart.add_task(get_mezzanine)
+uart.add_task(get_uarts)
 uart.add_task(update_boot_files_uart, name="update_boot_files")
 uart.add_task(set_local_nic_ip_from_usbdev)
 

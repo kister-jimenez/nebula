@@ -7,6 +7,7 @@ import glob
 from tqdm import tqdm
 
 import serial
+import serial.tools.list_ports
 from nebula.common import utils
 import xmodem
 
@@ -79,6 +80,36 @@ class uart(utils):
         logging.info("Closing UART")
         if self.com:
             self.com.close()
+
+    @staticmethod
+    def get_uart_devices(search_strings=None):
+        """ Scan all uart connected to the host"""
+        ports = serial.tools.list_ports.comports()
+        uart_ports = []
+        print(search_strings)
+        print(ports)
+        if search_strings is not None:
+            if(not isinstance(search_strings, list)):
+                search_strings = [search_strings]
+            for port in ports:
+                if any(x in port.device for x in search_strings):
+                    uart_ports.append({
+                        "path": port.device,
+                        "name": port.name,
+                        "description": port.description
+                        })
+        else:
+            for port in ports:
+                uart_ports.append({
+                    "path": port.device,
+                    "name": port.name,
+                    "description": port.description
+                    })
+
+        if (len(uart_ports)>0):
+            return uart_ports
+        else:
+            return None
 
     def _auto_set_address(self):
         """ Try to set yaml automatically """
