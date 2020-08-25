@@ -360,7 +360,7 @@ def set_local_nic_ip_from_usbdev(
     except Exception as ex:
         print(ex)
 
-@task(
+@task(iterable=['search_strings'],
     help={
         "search_strings": "List of portions of names of the device to match. ",
     },
