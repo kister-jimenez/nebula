@@ -86,8 +86,6 @@ class uart(utils):
         """ Scan all uart connected to the host"""
         ports = serial.tools.list_ports.comports()
         uart_ports = []
-        print(search_strings)
-        print(ports)
         if search_strings is not None:
             if(not isinstance(search_strings, list)):
                 search_strings = [search_strings]
@@ -369,6 +367,25 @@ class uart(utils):
                 except:
                     continue
         return None
+
+    def get_uart_command_for_linux_raw(self, cmd):
+        """ Write command to UART and wait for the lines of responses """
+        restart = False
+        if self.listen_thread_run:
+            restart = True
+            self.stop_log()
+        # Check if we need to login to the console
+        if not self._check_for_login():
+            raise Exception("Console inaccessible due to login failure")
+        self._write_data(cmd)
+        data = self._read_for_time(period=1)
+        if isinstance(data, list):
+            if isinstance(data[0], list):
+                data = data[0]
+        data = data[1:]  # Remove command itself
+        if restart:
+            self.start_log(logappend=True)
+        return data
 
     def get_local_mac_usbdev(self):
         """ Read MAC Address of enumerated NIC on host from DUT (Pluto/M2K only) """

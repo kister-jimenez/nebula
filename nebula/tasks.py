@@ -2,6 +2,7 @@ from invoke import Collection
 from invoke import task
 import nebula
 import logging
+import re
 import time
 import yaml
 import os
@@ -416,6 +417,80 @@ def get_carriername(
     except Exception as ex:
         print(ex)
 
+class device:
+    def __init__(self, name, channels=[]):
+        self.name = name
+        self.channels = channels
+
+def check_config(devices, fdevs):
+    found = 0
+    try:
+        for dev in devices:
+            for fdev in fdevs:
+                if not dev.name:
+                    continue
+                if dev.name.lower() == fdev.name.lower():
+                    if fdev.channels:
+                        # Check number of channels if matched
+                        if fdev.channels==dev.channels:
+                            found = found+1
+                        else:
+                            return False
+                    else:
+                        # No need to check number of channels
+                        found = found+1
+        return found == len(fdevs)
+    except:
+        return False
+
+def check_board_other(devices):
+    if check_config(
+        devices, [device("ad7291-ccbox"), device("ad9361-phy"), device("cf-ad9361-lpc", 4)]
+    ):
+        return "packrf"
+    if check_config(
+        devices, [device("ad9517"), device("ad9361-phy"), device("cf-ad9361-lpc", 4)]
+    ):
+        return "adrv9361"
+    if check_config(devices, [device("ad7291-bob"), device("cf-ad9361-lpc", 2)]):
+        return "adrv9364"
+    if check_config(
+        devices, [device("adm1177"), device("ad9361-phy"), device("cf-ad9361-lpc", 2)]
+    ):
+        return "pluto"
+    if check_config(
+        devices, [device("ad7291"), device("ad9361-phy"), device("cf-ad9361-lpc", 4)]
+    ):
+        return "fmcomms2"
+    if check_config(
+        devices, [device("ad7291"), device("ad9361-phy"), device("cf-ad9361-lpc", 2),],
+    ):
+        return "fmcomms4"
+    if check_config(devices, [device("ad9361-phy"), device("ad9361-phy-b")]):
+        return "fmcomms5"
+    if check_config(devices, [device("ad9361-phy"), device("cf-ad9361-lpc", 2)]):
+        return "ad9364"
+    if check_config(devices, [device("ad9361-phy"), device("cf-ad9361-lpc", 4)]):
+        return "ad9361"
+
+    if check_config(devices, [device("axi-ad9144-hpc", 4), device("axi-ad9680-hpc", 2)]):
+        return "daq2"
+
+    if check_config(devices, [device("axi-ad9152-hpc", 2), device("axi-ad9680-hpc", 2)]):
+        return "daq3"
+
+    if check_config(devices, [device("adrv9009-phy"), device("adrv9009-phy-b")]):
+        return "adrv9009-dual"
+    if check_config(devices, [device("adrv9009-phy")]):
+        return "adrv9009"
+
+    if check_config(devices, [device("ad9371-phy")]):
+        return "ad9371"
+
+    if check_config(devices, [device("adrv9002-phy")]):
+        return "adrv9002"
+
+    return None
 
 @task(
     help={
@@ -434,14 +509,32 @@ def get_mezzanine(
             address=address, yamlfilename=yamlfilename, board_name=board_name
         )
         u.print_to_console = False
-        cmd = "find /sys/ -name eeprom | xargs fru-dump -b -i | grep Part Number"
-        addr = u.get_uart_command_for_linux(cmd, "")
-        if addr:
-            if addr[-1] == "#":
-                addr = addr[:-1]
-            print(addr)
+        #cmd = "find /sys/ -name eeprom | xargs fru-dump -b -i | grep Part Number"
+        cmd = "iio_attr -u local: -c | grep iio:device"
+        results = u.get_uart_command_for_linux_raw(cmd)
+        pattern = 'iio:device\d+:\s(.*),\s+found\s+(\d*)\s+channel'
+        p = re.compile(pattern)
+        devices=[]
+        if results:
+            for line in results:
+                if line[-1] == "#":
+                    break
+                else:
+                    s = p.search(line)
+                    if (s):
+                        device_name = s.group(1)
+                        num_channels = s.group(2)
+                        if (num_channels):
+                            devices.append(device(device_name.strip(),int(num_channels)))
+                        else:
+                            devices.append(device(device_name.strip()))
+            found_device = check_board_other(devices)
+            if (found_device):
+                print("Found:",found_device)
+            else:
+                print("No devices found")
         else:
-            print("Address not found")
+            print("No devices found")
         del u
     except Exception as ex:
         print(ex)
